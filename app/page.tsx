@@ -16,6 +16,5 @@ export default async function Home() {
       redirect(`/perfil/${data.userId}`);
     }
   }
-
   redirect("/login");
 }
