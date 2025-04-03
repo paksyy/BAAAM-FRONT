@@ -82,7 +82,7 @@ const Directorio = () => {
   useEffect(() => {
     const fetchFilters = async () => {
       try {
-        const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/empresas/filters`);
+        const response = await fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/empresas/filters`);
         const data: FilterData = await response.json();
         setFilters(data);
       } catch (error) {
@@ -121,7 +121,7 @@ const Directorio = () => {
           total: number,
           totalPages: number
         }
-      }>(`${process.env.NEXT_PUBLIC_API_URL}/empresas`, {
+      }>(`${process.env.NEXT_PUBLIC_API_BASE}/api/empresas`, {
         params: {
           search: searchText,
           raz_social: activeFilters.raz_social,
