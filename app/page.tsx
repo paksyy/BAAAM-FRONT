@@ -1,23 +1,37 @@
-import { headers } from 'next/headers';
-import { redirect } from 'next/navigation';
+'use client';
+
+import { useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 
 const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
-export default async function Home() {
-  const headerList = await headers(); // Esperamos a que se resuelva la promesa
-  const cookieHeader = headerList.get("cookie") || "";
-  
+export default function Home() {
+  const router = useRouter();
 
-  const res = await fetch(`${apiUrl}/auth/me`, {
-    cache: "no-store",
-    headers: { cookie: cookieHeader },
-  });
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch(`${apiUrl}/auth/me`, {
+          credentials: 'include'
+        });
+        if (res.ok) {
+          const data = await res.json();
+          router.push(`/perfil/${data.userId}`);
+        } else {
+          router.push('/login');
+        }
+      } catch (error) {
+        console.error('Error comprobando sesión:', error);
+        router.push('/login');
+      }
+    };
 
-  if (res.ok) {
-    const data = await res.json();
-    if (data.userId) {
-      redirect(`/perfil/${data.userId}`);
-    }
-  }
-  redirect("/login");
+    checkSession();
+  }, []);
+
+  return (
+    <div className="min-h-screen flex items-center justify-center text-cyan-300">
+      Cargando...
+    </div>
+  );
 }

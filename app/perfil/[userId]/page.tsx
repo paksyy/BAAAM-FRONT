@@ -2,6 +2,7 @@
 
 import { useParams } from 'next/navigation';
 import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
+import { useRouter } from 'next/navigation'; 
 import Image from 'next/image';
 import { 
   FiUser, FiMail, FiBriefcase, FiEdit, FiMapPin, FiPhone, FiGlobe, FiLinkedin, FiTwitter, FiGithub, FiMessageSquare 
@@ -40,6 +41,26 @@ export default function ProfilePage() {
   const [newAvatar, setNewAvatar] = useState<File | null>(null);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const apiBase = process.env.NEXT_PUBLIC_API_BASE;
+  const router = useRouter();
+
+  useEffect(() => {
+    const checkSession = async () => {
+      try {
+        const res = await fetch(`${apiUrl}/auth/me`, {
+          credentials: 'include',
+        });
+  
+        if (!res.ok) {
+          router.replace('/login');
+        }
+      } catch (error) {
+        console.error('Error al verificar sesión:', error);
+        router.replace('/login');
+      }
+    };
+  
+    checkSession();
+  }, [router]);
 
   // Fetch del perfil a mostrar
   useEffect(() => {
@@ -76,9 +97,12 @@ export default function ProfilePage() {
         if (res.ok) {
           const data = await res.json();
           setCurrentUserId(data.userId);
+        } else {
+          window.location.href = '/login'; // ⬅ redirige si no hay sesión
         }
       } catch (error) {
         console.error('Error obteniendo usuario actual:', error);
+        window.location.href = '/login'; // ⬅ también si hay error
       }
     };
     fetchCurrentUser();

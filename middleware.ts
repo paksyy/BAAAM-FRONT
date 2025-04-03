@@ -4,23 +4,33 @@ import type { NextRequest } from 'next/server';
 export function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Excluir archivos estáticos y rutas internas
-  if (
-    pathname.startsWith('/_next/') ||
-    pathname.startsWith('/api/') ||
-    pathname.includes('.') // archivos como .js, .css
-  ) {
+  // Rutas que no requieren autenticación
+  const publicPaths = ['/login', '/register', '/terminos', '/favicon.ico'];
+
+  const isPublic = publicPaths.some((publicPath) => pathname.startsWith(publicPath));
+
+  const isStatic = pathname.startsWith('/_next/') || pathname.includes('.');
+
+  if (isPublic || isStatic) {
     return NextResponse.next();
   }
 
-  // Rutas públicas permitidas sin sesión
-  const publicPaths = ['/login', '/register', '/terminos'];
-  const isPublic = publicPaths.some((path) => pathname.startsWith(path));
+  // Verificar cookie de sesión
+  const session = request.cookies.get('connect.sid');
 
-  if (isPublic) {
-    return NextResponse.next();
+  if (!session) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/login';
+    url.searchParams.set('redirect', pathname); // opcional: guardar a dónde quería ir
+    return NextResponse.redirect(url);
   }
 
-  // NO validamos cookie aquí porque NO es del mismo dominio
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: [
+    // Middleware aplicado a TODAS las páginas (excepto APIs y recursos estáticos)
+    '/((?!api|_next/static|_next/image|favicon.ico).*)',
+  ],
+};
