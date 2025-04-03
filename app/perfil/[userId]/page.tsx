@@ -4,7 +4,7 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
 import Image from 'next/image';
 import { 
-  FiUser, FiMail, FiBriefcase, FiEdit, FiMapPin, FiPhone, FiGlobe, FiLinkedin, FiTwitter, FiGithub 
+  FiUser, FiMail, FiBriefcase, FiEdit, FiMapPin, FiPhone, FiGlobe, FiLinkedin, FiTwitter, FiGithub, FiMessageSquare 
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import Navbar from '../../../components/NavBar/Navbar';
@@ -161,6 +161,12 @@ export default function ProfilePage() {
     } catch (error) {
       console.error('Error en la actualización:', error);
     }
+  };
+
+  const handleSendFeedback = () => {
+    const subject = encodeURIComponent('Comentarios sobre mi perfil');
+    const body = encodeURIComponent(`Hola,\n\nQuiero enviar los siguientes comentarios sobre mi perfil (ID: ${userId}):\n\n`);
+    window.location.href = `mailto:baaam@uabc.edu.mx?subject=${subject}&body=${body}`;
   };
 
   if (isLoading) {
@@ -570,6 +576,25 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
+               {/* Botón de enviar comentarios (solo para el dueño del perfil) */}
+               {isOwner && (
+                <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-slate-700/50">
+                  <h2 className="text-2xl font-semibold mb-6 flex items-center text-cyan-400">
+                    <FiMessageSquare className="mr-2" />
+                    Comentarios
+                  </h2>
+                  <p className="text-cyan-100/80 mb-4">
+                    ¿Tienes algún comentario o sugerencia sobre la plataforma? Háznoslo saber.
+                  </p>
+                  <button
+                    onClick={handleSendFeedback}
+                    className="w-full py-3 bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 font-medium rounded-lg flex items-center justify-center hover:from-cyan-500 hover:to-blue-600 transition-colors shadow-lg"
+                  >
+                    <FiMessageSquare className="mr-2" />
+                    Enviar Comentarios
+                  </button>
+                </div>
+              )}
             </div>
           </motion.main>
         )}
