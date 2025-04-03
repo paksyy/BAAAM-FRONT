@@ -1,11 +1,14 @@
 import { headers } from 'next/headers';
 import { redirect } from 'next/navigation';
 
+const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+
 export default async function Home() {
   const headerList = await headers(); // Esperamos a que se resuelva la promesa
   const cookieHeader = headerList.get("cookie") || "";
+  
 
-  const res = await fetch("http://localhost:4000/api/auth/me", {
+  const res = await fetch(`${apiUrl}/auth/me`, {
     cache: "no-store",
     headers: { cookie: cookieHeader },
   });

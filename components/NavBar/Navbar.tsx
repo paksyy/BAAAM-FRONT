@@ -10,6 +10,7 @@ import baaamLogo from '../../public/baaam-logo.png';
 
 const Navbar = () => {
   const router = useRouter();
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showProfileMenu, setShowProfileMenu] = useState(false);
 
@@ -26,7 +27,7 @@ const Navbar = () => {
   const handleLogout = async (e: React.MouseEvent<HTMLAnchorElement>) => {
     e.preventDefault();
     try {
-      const res = await fetch('http://localhost:4000/api/auth/logout', {
+      const res = await fetch(`${apiUrl}/auth/logout`, {
         method: 'POST',
         credentials: 'include',
       });

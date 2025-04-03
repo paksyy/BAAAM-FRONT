@@ -38,13 +38,15 @@ export default function ProfilePage() {
   const [editData, setEditData] = useState<Partial<UserProfile>>({});
   // Para la foto nueva, guardamos el archivo
   const [newAvatar, setNewAvatar] = useState<File | null>(null);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+  const apiBase = process.env.NEXT_PUBLIC_API_BASE;
 
   // Fetch del perfil a mostrar
   useEffect(() => {
     const fetchProfile = async () => {
       try {
         setIsLoading(true);
-        const res = await fetch(`http://localhost:4000/api/user/profile/${userId}`, {
+        const res = await fetch(`${apiUrl}/user/profile/${userId}`, {
           credentials: 'include'
         });
         if (res.ok) {
@@ -68,7 +70,7 @@ export default function ProfilePage() {
   useEffect(() => {
     const fetchCurrentUser = async () => {
       try {
-        const res = await fetch(`http://localhost:4000/api/auth/me`, {
+        const res = await fetch(`${apiUrl}/auth/me`, {
           credentials: 'include'
         });
         if (res.ok) {
@@ -143,7 +145,7 @@ export default function ProfilePage() {
         formData.append('avatar', newAvatar);
       }
       // Realiza la petición PUT al endpoint de actualización de perfil
-      const res = await fetch(`http://localhost:4000/api/user/profile/${userId}`, {
+      const res = await fetch(`${apiUrl}/user/profile/${userId}`, {
         method: 'PUT',
         credentials: 'include',
         body: formData
@@ -204,7 +206,7 @@ export default function ProfilePage() {
           <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center space-y-6 md:space-y-0 md:space-x-8">
             <motion.div whileHover={{ scale: 1.05 }} className="relative w-32 h-32 md:w-40 md:h-40">
               <img
-                src={profile.avatar ? `http://localhost:4000${profile.avatar}` : "/default-avatar.png"}
+                src={profile.avatar ? `${apiBase}${profile.avatar}` : "/default-avatar.png"}
                 alt=""
                 className="rounded-full object-cover border-4 border-cyan-400/30 shadow-xl w-full h-full"
               />
