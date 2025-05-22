@@ -3,15 +3,13 @@
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 
-const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-
 export default function Home() {
   const router = useRouter();
 
   useEffect(() => {
     const checkSession = async () => {
       try {
-        const res = await fetch(`${apiUrl}/auth/me`, {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/me`, {
           credentials: 'include'
         });
         if (res.ok) {

@@ -4,11 +4,14 @@ import { useParams } from 'next/navigation';
 import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
 import { useRouter } from 'next/navigation'; 
 import Image from 'next/image';
+import toast from 'react-hot-toast';
 import { 
-  FiUser, FiMail, FiBriefcase, FiEdit, FiMapPin, FiPhone, FiGlobe, FiLinkedin, FiTwitter, FiGithub, FiMessageSquare 
+  FiUser, FiMail, FiBriefcase, FiEdit, FiMapPin, FiPhone, FiGlobe, 
+  FiLinkedin, FiTwitter, FiGithub, FiMessageSquare, FiUserPlus, FiChevronRight, FiX
 } from 'react-icons/fi';
 import { motion } from 'framer-motion';
 import Navbar from '../../../components/NavBar/Navbar';
+import FeedPosts from '@/components/forum/FeedPosts';
 
 interface UserProfile {
   id: string;
@@ -29,6 +32,14 @@ interface UserProfile {
   skills?: string[];
 }
 
+interface UserConnection {
+  id: string;
+  name: string;
+  avatar?: string;
+  position?: string;
+  company?: string;
+}
+
 export default function ProfilePage() {
   const { userId } = useParams() as { userId: string };
   const [profile, setProfile] = useState<UserProfile | null>(null);
@@ -39,6 +50,13 @@ export default function ProfilePage() {
   const [editData, setEditData] = useState<Partial<UserProfile>>({});
   // Para la foto nueva, guardamos el archivo
   const [newAvatar, setNewAvatar] = useState<File | null>(null);
+  // Para usuarios agregados
+  const [connections, setConnections] = useState<UserConnection[]>([]);
+  const [showAllConnections, setShowAllConnections] = useState<boolean>(false);
+  const [isConnectionLoading, setIsConnectionLoading] = useState<boolean>(false);
+  const [isUserAdded, setIsUserAdded] = useState<boolean>(false);
+  const [posts, setPosts] = useState<any[]>([]);
+
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
   const apiBase = process.env.NEXT_PUBLIC_API_BASE;
   const router = useRouter();
@@ -107,6 +125,86 @@ export default function ProfilePage() {
     };
     fetchCurrentUser();
   }, []);
+
+  useEffect(() => {
+    const fetchUserPosts = async () => {
+      if (!userId) return;
+      
+      try {
+        // Asegúrate de que NEXT_PUBLIC_API_BASE no incluya /api al final
+        const url = `${process.env.NEXT_PUBLIC_API_BASE}/api/user/${userId}/posts`;
+        console.log('Intentando cargar publicaciones desde:', url);
+        
+        const res = await fetch(url, {
+          credentials: 'include',
+          headers: {
+            'Accept': 'application/json'
+          }
+        });
+        
+        // Para debugging, muestra el status y el texto de respuesta
+        console.log('Status de respuesta:', res.status);
+        
+        if (res.ok) {
+          const data = await res.json();
+          console.log('Datos de publicaciones recibidos:', data);
+          if (Array.isArray(data)) {
+            setPosts(data);
+          } else {
+            console.error('Los datos recibidos no son un array:', data);
+            setPosts([]);
+          }
+        } else {
+          // Intentar obtener el mensaje de error del servidor
+          const errorText = await res.text().catch(() => 'No se pudo leer el error');
+          console.error(`Error al cargar publicaciones (${res.status}):`, errorText);
+        }
+      } catch (error) {
+        console.error('Excepción al obtener publicaciones:', error);
+      }
+    };
+    
+    if (userId) {
+      fetchUserPosts();
+    }
+  }, [userId]);
+  
+  // Fetch de usuarios agregados
+  useEffect(() => {
+    const fetchUserConnections = async () => {
+      if (!currentUserId || !userId) return;
+      
+      try {
+        setIsConnectionLoading(true);
+        const res = await fetch(`${apiUrl}/user/connections/${userId}`, {
+          credentials: 'include'
+        });
+        
+        if (res.ok) {
+          const data = await res.json();
+          setConnections(data.connections);
+          
+          // Verificar si el usuario actual ya tiene agregado a este perfil
+          if (userId !== currentUserId) {
+            const checkRes = await fetch(`${apiUrl}/user/check-connection/${userId}`, {
+              credentials: 'include'
+            });
+            
+            if (checkRes.ok) {
+              const checkData = await checkRes.json();
+              setIsUserAdded(checkData.isConnected);
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error obteniendo conexiones:', error);
+      } finally {
+        setIsConnectionLoading(false);
+      }
+    };
+    
+    fetchUserConnections();
+  }, [currentUserId, userId]);
 
   // Calcula si el usuario que ve el perfil es su dueño
   const isOwner = profile && currentUserId && profile.id === currentUserId;
@@ -193,6 +291,46 @@ export default function ProfilePage() {
     window.location.href = `mailto:baaam@uabc.edu.mx?subject=${subject}&body=${body}`;
   };
 
+  // Función para agregar o quitar un usuario
+  const handleToggleConnection = async () => {
+    if (!currentUserId || !userId || currentUserId === userId) return;
+    
+    try {
+      const method = isUserAdded ? 'DELETE' : 'POST';
+      const res = await fetch(`${apiUrl}/user/connections/${userId}`, {
+        method: method,
+        credentials: 'include',
+      });
+      
+      if (res.ok) {
+        setIsUserAdded(!isUserAdded);
+        toast.success(isUserAdded ? 'Usuario eliminado' : 'Usuario agregado');
+        
+        const connRes = await fetch(`${apiUrl}/user/connections/${userId}`, {
+          credentials: 'include'
+        });
+        
+        if (connRes.ok) {
+          const data = await connRes.json();
+          setConnections(data.connections);
+        }
+      } else {
+        // Manejo de errores de la respuesta HTTP
+        const errorData = await res.json().catch(() => ({}));
+        toast.error(errorData.message || 'Error al procesar la solicitud');
+      }
+    } catch (error) {
+      console.error('Error al gestionar conexión:', error);
+      
+      // Manejo seguro del tipo unknown
+      if (error instanceof Error) {
+        toast.error(error.message || 'Error al conectar con el servidor');
+      } else {
+        toast.error('Ocurrió un error desconocido');
+      }
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900">
@@ -220,6 +358,9 @@ export default function ProfilePage() {
     visible: { opacity: 1, y: 0, transition: { duration: 0.5 } }
   };
 
+  // Filtrar conexiones para mostrar
+  const visibleConnections = showAllConnections ? connections : connections.slice(0, 6);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
       <Navbar />
@@ -233,24 +374,15 @@ export default function ProfilePage() {
           variants={fadeIn}
           className="bg-gradient-to-r from-cyan-500/20 to-blue-500/20 py-12 rounded-2xl backdrop-blur-sm mb-8 border border-slate-700/50 relative"
         >
-          <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center space-y-6 md:space-y-0 md:space-x-8">
+          <div className="max-w-6xl mx-auto px-4 flex flex-col md:flex-row items-center md:items-start space-y-6 md:space-y-0 md:space-x-8">
             <motion.div whileHover={{ scale: 1.05 }} className="relative w-32 h-32 md:w-40 md:h-40">
               <img
                 src={profile.avatar ? `${apiBase}${profile.avatar}` : "/default-avatar.png"}
                 alt=""
                 className="rounded-full object-cover border-4 border-cyan-400/30 shadow-xl w-full h-full"
               />
-              {isOwner && !isEditing && (
-                <button 
-                  onClick={startEditing}
-                  className="absolute bottom-0 right-0 bg-cyan-500 p-2 rounded-full shadow-lg hover:bg-cyan-600 transition-colors"
-                  title="Editar foto de perfil"
-                >
-                  <FiEdit size={18} />
-                </button>
-              )}
             </motion.div>
-            <div className="text-center md:text-left">
+            <div className="text-center md:text-left flex-grow">
               {isEditing ? (
                 <input 
                   type="text"
@@ -264,10 +396,28 @@ export default function ProfilePage() {
                   {profile.name}
                 </h1>
               )}
-              {/* Mostramos el correo de login de forma de lectura (no editable) */}
-              <div className="flex items-center justify-center md:justify-start space-x-2 mt-2">
-                <FiMail className="text-cyan-400" />
-                <p className="text-cyan-100/80">{profile.email}</p>
+              {/* Mostramos los iconos de redes sociales debajo de la foto */}
+              <div className="flex justify-center md:justify-start mt-4 space-x-4">
+                {profile.linkedin && (
+                  <a href={`https://linkedin.com/in/${profile.linkedin}`} target="_blank" rel="noopener noreferrer">
+                    <FiLinkedin className="text-cyan-400 text-2xl hover:text-cyan-300" />
+                  </a>
+                )}
+                {profile.twitter && (
+                  <a href={`https://twitter.com/${profile.twitter}`} target="_blank" rel="noopener noreferrer">
+                    <FiTwitter className="text-cyan-400 text-2xl hover:text-cyan-300" />
+                  </a>
+                )}
+                {profile.github && (
+                  <a href={`https://github.com/${profile.github}`} target="_blank" rel="noopener noreferrer">
+                    <FiGithub className="text-cyan-400 text-2xl hover:text-cyan-300" />
+                  </a>
+                )}
+                {profile.website && (
+                  <a href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`} target="_blank" rel="noopener noreferrer">
+                    <FiGlobe className="text-cyan-400 text-2xl hover:text-cyan-300" />
+                  </a>
+                )}
               </div>
               {isEditing ? (
                 <>
@@ -306,8 +456,48 @@ export default function ProfilePage() {
                   value={editData.bio || ''}
                   onChange={handleInputChange}
                   placeholder="Escribe tu biografía..."
-                  className="mt-4 w-full bg-transparent border border-cyan-400 rounded-md p-2 text-sm text-cyan-100/80 focus:outline-none"
+                  className="mt-4 w-full bg-transparent border border-cyan-400 rounded-md p-3 text-base placeholder:text-cyan-400/50 text-cyan-100/80 focus:outline-none focus:ring-2 focus:ring-cyan-400"
                 />
+              )}
+            </div>
+            
+            {/* Botones de acción: Editar perfil o Agregar usuario */}
+            <div className="flex flex-col items-center space-y-2">
+              {isOwner ? (
+                !isEditing && (
+                  <motion.button 
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    onClick={startEditing}
+                    className="bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900 px-4 py-2 rounded-lg font-medium flex items-center shadow-lg hover:shadow-xl transition-all"
+                  >
+                    <FiEdit className="mr-2" />
+                    Editar Perfil
+                  </motion.button>
+                )
+              ) : (
+                <motion.button 
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={handleToggleConnection}
+                  className={`px-4 py-2 rounded-lg font-medium flex items-center shadow-lg hover:shadow-xl transition-all ${
+                    isUserAdded 
+                      ? 'bg-slate-700 text-red-400' 
+                      : 'bg-gradient-to-r from-cyan-400 to-blue-500 text-slate-900'
+                  }`}
+                >
+                  {isUserAdded ? (
+                    <>
+                      <FiX className="mr-2" />
+                      Eliminar Usuario
+                    </>
+                  ) : (
+                    <>
+                      <FiUserPlus className="mr-2" />
+                      Agregar Usuario
+                    </>
+                  )}
+                </motion.button>
               )}
             </div>
           </div>
@@ -335,10 +525,10 @@ export default function ProfilePage() {
               <div>
                 <label className="block text-cyan-300 font-medium">Situación Laboral Actual</label>
                 <select
-                  name="currentEmployment"
+                  name="current_employment"
                   value={editData.current_employment || ''}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-700 p-2 rounded border border-cyan-400 focus:outline-none"
+                  className="w-full bg-slate-800/50 p-3 rounded-lg border-2 border-cyan-400/20 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 focus:outline-none transition-all"
                 >
                   <option value="">Selecciona una opción</option>
                   <option value="Estudiante">Estudiante</option>
@@ -349,33 +539,13 @@ export default function ProfilePage() {
                 </select>
               </div>
               <div>
-                <label className="block text-cyan-300 font-medium">Empresa / Institución</label>
-                <input 
-                  type="text"
-                  name="company"
-                  value={editData.company || ''}
-                  onChange={handleInputChange}
-                  className="w-full bg-slate-700 p-2 rounded border border-cyan-400 focus:outline-none"
-                />
-              </div>
-              <div>
-                <label className="block text-cyan-300 font-medium">Puesto</label>
-                <input 
-                  type="text"
-                  name="position"
-                  value={editData.position || ''}
-                  onChange={handleInputChange}
-                  className="w-full bg-slate-700 p-2 rounded border border-cyan-400 focus:outline-none"
-                />
-              </div>
-              <div>
                 <label className="block text-cyan-300 font-medium">Teléfono</label>
                 <input 
                   type="text"
                   name="phone"
                   value={editData.phone || ''}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-700 p-2 rounded border border-cyan-400 focus:outline-none"
+                  className="w-full bg-slate-800/50 p-3 rounded-lg border-2 border-cyan-400/20 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 focus:outline-none transition-all"
                 />
               </div>
               <div>
@@ -385,7 +555,7 @@ export default function ProfilePage() {
                   name="contact_email"
                   value={editData.contact_email || ''}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-700 p-2 rounded border border-cyan-400 focus:outline-none"
+                  className="w-full bg-slate-800/50 p-3 rounded-lg border-2 border-cyan-400/20 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 focus:outline-none transition-all"
                 />
               </div>
               <div>
@@ -395,7 +565,7 @@ export default function ProfilePage() {
                   name="website"
                   value={editData.website || ''}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-700 p-2 rounded border border-cyan-400 focus:outline-none"
+                  className="w-full bg-slate-800/50 p-3 rounded-lg border-2 border-cyan-400/20 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 focus:outline-none transition-all"
                 />
               </div>
               <div>
@@ -405,7 +575,7 @@ export default function ProfilePage() {
                   name="linkedin"
                   value={editData.linkedin || ''}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-700 p-2 rounded border border-cyan-400 focus:outline-none"
+                  className="w-full bg-slate-800/50 p-3 rounded-lg border-2 border-cyan-400/20 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 focus:outline-none transition-all"
                 />
               </div>
               <div>
@@ -415,7 +585,7 @@ export default function ProfilePage() {
                   name="twitter"
                   value={editData.twitter || ''}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-700 p-2 rounded border border-cyan-400 focus:outline-none"
+                  className="w-full bg-slate-800/50 p-3 rounded-lg border-2 border-cyan-400/20 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 focus:outline-none transition-all"
                 />
               </div>
               <div>
@@ -425,7 +595,17 @@ export default function ProfilePage() {
                   name="github"
                   value={editData.github || ''}
                   onChange={handleInputChange}
-                  className="w-full bg-slate-700 p-2 rounded border border-cyan-400 focus:outline-none"
+                  className="w-full bg-slate-800/50 p-3 rounded-lg border-2 border-cyan-400/20 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 focus:outline-none transition-all"
+                />
+              </div>
+              <div>
+                <label className="block text-cyan-300 font-medium">Ubicación</label>
+                <input 
+                  type="text"
+                  name="location"
+                  value={editData.location || ''}
+                  onChange={handleInputChange}
+                  className="w-full bg-slate-800/50 p-3 rounded-lg border-2 border-cyan-400/20 focus:border-cyan-400 focus:ring-2 focus:ring-cyan-400/30 focus:outline-none transition-all"
                 />
               </div>
             </div>
@@ -455,55 +635,45 @@ export default function ProfilePage() {
             variants={fadeIn}
             className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8"
           >
-            {/* Columna izquierda - Información básica */}
-            <div className="lg:col-span-2 space-y-6">
-              {/* Sección de empleo */}
-              <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-slate-700/50">
-                <h2 className="text-2xl font-semibold mb-6 flex items-center text-cyan-400">
-                  <FiBriefcase className="mr-2" />
-                  Experiencia Profesional
-                </h2>
-                <div className="space-y-4">
-                  <div>
-                    <h3 className="text-lg font-medium text-white">Situación Laboral Actual</h3>
-                    <p className="text-cyan-100/80">
-                      {profile.current_employment || 'No especificado'}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-medium text-white">Empresa/Institución</h3>
-                    <p className="text-cyan-100/80">
-                      {profile.company || 'No especificado'}
-                    </p>
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-medium text-white">Puesto</h3>
-                    <p className="text-cyan-100/80">
-                      {profile.position || 'No especificado'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Sección de habilidades */}
-              {profile.skills && profile.skills.length > 0 && (
+            {/* Columna izquierda - Información básica y publicaciones */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Sección de empleo */}
                 <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-slate-700/50">
-                  <h2 className="text-2xl font-semibold mb-6 text-cyan-400">Habilidades</h2>
-                  <div className="flex flex-wrap gap-2">
-                    {profile.skills.map((skill, index) => (
-                      <motion.span
-                        key={index}
-                        whileHover={{ scale: 1.05 }}
-                        className="px-4 py-2 bg-cyan-400/10 text-cyan-400 rounded-full text-sm"
-                      >
-                        {skill}
-                      </motion.span>
-                    ))}
+                  <h2 className="text-2xl font-semibold mb-6 flex items-center text-cyan-400">
+                    <FiBriefcase className="mr-2" />
+                    Experiencia Profesional
+                  </h2>
+                  <div className="space-y-6">
+                    <div>
+                      <h3 className="text-lg font-medium text-white">Situación Laboral Actual</h3>
+                      <p className="text-cyan-100/80">
+                        {profile.current_employment || 'No especificado'}
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-white">Empresa/Institución</h3>
+                      <p className="text-cyan-100/80">
+                        {profile.company || 'No especificado'}
+                      </p>
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-medium text-white">Puesto</h3>
+                      <p className="text-cyan-100/80">
+                        {profile.position || 'No especificado'}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              )}
-            </div>
 
+                {/* Sección de publicaciones */}
+                {posts.length > 0 ? (
+                  <div className="mt-8">
+                      <FeedPosts initialFilters={{ userId: profile.id }} />
+                    </div>
+                  ) : (
+                  <p className="mt-4 text-cyan-100/50"></p>
+                )}
+              </div>
             {/* Columna derecha - Información de contacto */}
             <div className="space-y-6">
               {/* Sección de contacto */}
@@ -538,70 +708,69 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
-
-              {/* Sección de redes sociales */}
-              <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-slate-700/50">
-                <h2 className="text-2xl font-semibold mb-6 text-cyan-400">Redes Sociales</h2>
-                <div className="space-y-4">
-                  {profile.website && (
-                    <div className="flex items-center">
-                      <FiGlobe className="text-cyan-400 mr-3" />
-                      <a 
-                        href={profile.website.startsWith('http') ? profile.website : `https://${profile.website}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyan-100/80 hover:text-cyan-400 transition-colors"
+              {/* Sección de usuarios agregados (para todos los perfiles) */}
+              {connections.length >= 0 && (
+                <motion.div 
+                  initial="hidden"
+                  animate="visible"
+                  variants={fadeIn}
+                  className="max-w-6xl mx-auto mt-8 bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-slate-700/50"
+                >
+                  <div className="flex justify-between items-center mb-6">
+                    <h2 className="text-2xl font-semibold text-cyan-400 flex items-center">
+                      <FiUserPlus className="mr-2" />
+                      Usuarios Agregados ({connections.length})
+                    </h2>
+                    {connections.length > 6 && (
+                      <button 
+                        onClick={() => setShowAllConnections(!showAllConnections)} 
+                        className="text-cyan-400 hover:text-cyan-300 flex items-center"
                       >
-                        {profile.website.replace(/^https?:\/\//, '')}
-                      </a>
+                        {showAllConnections ? 'Ver menos' : 'Ver más'}
+                        <FiChevronRight className={`ml-1 transform transition-transform ${showAllConnections ? 'rotate-90' : ''}`} />
+                      </button>
+                    )}
+                  </div>
+                  
+                  {isConnectionLoading ? (
+                    <div className="text-center py-8">
+                      <motion.div
+                        animate={{ opacity: [0.5, 1, 0.5] }}
+                        transition={{ repeat: Infinity, duration: 1.5 }}
+                        className="text-lg text-cyan-400"
+                      >
+                        Cargando conexiones...
+                      </motion.div>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-3 sm:grid-cols-3 lg:grid-cols-3 xl:grid-cols-3 gap-1 mt-8" style={{ gridTemplateColumns: 'repeat(auto-fill, minmax(100px, 1fr))' }}>
+                      {visibleConnections.map((connection) => (
+                        <motion.div
+                          key={connection.id}
+                          whileHover={{ scale: 1.05 }}
+                          className="flex flex-col items-center text-center p-2"
+                        >
+                          <a href={`/perfil/${connection.id}`} className="block">
+                            <div className="w-12 h-12 mb-3 mx-auto relative"> {/* Reducimos aún más el tamaño de la imagen */}
+                              <img
+                                src={connection.avatar ? `${apiBase}${connection.avatar}` : "/default-avatar.png"}
+                                alt={connection.name}
+                                className="rounded-full w-full h-full object-cover border-2 border-cyan-400/30"
+                              />
+                            </div>
+                            <p className="text-cyan-100 font-medium text-xs truncate w-full">{connection.name}</p> {/* Reducimos el tamaño del texto */}
+                            {connection.position && (
+                              <p className="text-cyan-300/70 text-xs truncate w-full">{connection.position}</p>
+                            )}
+                          </a>
+                        </motion.div>
+                      ))}
                     </div>
                   )}
-                  {profile.linkedin && (
-                    <div className="flex items-center">
-                      <FiLinkedin className="text-cyan-400 mr-3" />
-                      <a 
-                        href={profile.linkedin.startsWith('http') ? profile.linkedin : `https://linkedin.com/in/${profile.linkedin}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyan-100/80 hover:text-cyan-400 transition-colors"
-                      >
-                        {profile.linkedin.replace(/^https?:\/\//, '').replace('linkedin.com/in/', '')}
-                      </a>
-                    </div>
-                  )}
-                  {profile.twitter && (
-                    <div className="flex items-center">
-                      <FiTwitter className="text-cyan-400 mr-3" />
-                      <a 
-                        href={profile.twitter.startsWith('http') ? profile.twitter : `https://twitter.com/${profile.twitter}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyan-100/80 hover:text-cyan-400 transition-colors"
-                      >
-                        {profile.twitter.replace(/^https?:\/\//, '').replace('twitter.com/', '@')}
-                      </a>
-                    </div>
-                  )}
-                  {profile.github && (
-                    <div className="flex items-center">
-                      <FiGithub className="text-cyan-400 mr-3" />
-                      <a 
-                        href={profile.github.startsWith('http') ? profile.github : `https://github.com/${profile.github}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-cyan-100/80 hover:text-cyan-400 transition-colors"
-                      >
-                        {profile.github.replace(/^https?:\/\//, '').replace('github.com/', '')}
-                      </a>
-                    </div>
-                  )}
-                  {!profile.website && !profile.linkedin && !profile.twitter && !profile.github && (
-                    <p className="text-cyan-100/50 italic">No hay redes sociales registradas</p>
-                  )}
-                </div>
-              </div>
-               {/* Botón de enviar comentarios (solo para el dueño del perfil) */}
-               {isOwner && (
+                </motion.div>
+              )}
+              {/* Botón de enviar comentarios (solo para el dueño del perfil) */}
+              {isOwner && (
                 <div className="bg-slate-800/50 backdrop-blur-sm rounded-xl p-6 shadow-xl border border-slate-700/50">
                   <h2 className="text-2xl font-semibold mb-6 flex items-center text-cyan-400">
                     <FiMessageSquare className="mr-2" />
