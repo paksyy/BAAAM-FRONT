@@ -34,51 +34,56 @@ export default function ForoFeedClient() {
   };
 
   /* load feed */
-  const load = useCallback(async (resetPage: boolean = true) => {
-    try {
-      setLoading(true);
-      setError('');
-      
-      const currentPage = resetPage ? 1 : page;
-      
-      const url = new URL(`${process.env.NEXT_PUBLIC_API_BASE}/api/forum/posts`);
-      url.searchParams.set('page', currentPage.toString());
-      url.searchParams.set('limit', '10');
-      if (filters.sort) url.searchParams.set('sort', filters.sort);
-      if (filters.tag) url.searchParams.set('tag', filters.tag);
-      if (filters.q) url.searchParams.set('q', filters.q);
-      
-      Object.entries(filters).forEach(([k, v]) => v && url.searchParams.set(k, v));
-      
-      const res = await fetch(url.toString(), { credentials: 'include' });
-      
-      if (!res.ok) throw new Error('Error al cargar publicaciones');
-      
-      const data = await res.json();
-      
-      if (resetPage) {
-        setPosts(data);
-        setPage(1);
-      } else {
-        setPosts(prev => [...prev, ...data]);
-      }
-      
-      setHasMore(data.length === 10); // Asumiendo que el límite es 10
-    } catch (err) {
-      console.error(err);
-      setError('No se pudieron cargar las publicaciones');
-    } finally {
-      setLoading(false);
+  const load = useCallback(async (resetPage: boolean = true, pageNumber?: number) => {
+  try {
+    setLoading(true);
+    setError('');
+
+    const currentPage = resetPage ? 1 : pageNumber ?? page;
+
+    const url = new URL(`${process.env.NEXT_PUBLIC_API_BASE}/api/forum/posts`);
+    url.searchParams.set('page', currentPage.toString());
+    url.searchParams.set('limit', '10');
+    if (filters.sort) url.searchParams.set('sort', filters.sort);
+    if (filters.tag) url.searchParams.set('tag', filters.tag);
+    if (filters.q) url.searchParams.set('q', filters.q);
+
+    const res = await fetch(url.toString(), { credentials: 'include' });
+
+    if (!res.ok) throw new Error('Error al cargar publicaciones');
+
+    const data = await res.json();
+
+    if (resetPage) {
+      setPosts(data);
+      setPage(1);
+    } else {
+      setPosts(prev => {
+        const allPosts = [...prev, ...data];
+        const uniquePosts = allPosts.filter((post, index, self) =>
+          index === self.findIndex(p => p.id === post.id)
+        );
+        return uniquePosts;
+      });
     }
-  }, [filters, page]);
+
+    setHasMore(data.length === 10);
+  } catch (err) {
+    console.error(err);
+    setError('No se pudieron cargar las publicaciones');
+  } finally {
+    setLoading(false);
+  }
+}, [filters, page]);
 
   useEffect(() => {
     load(true);
   }, [filters]);
 
   const loadMore = () => {
-    setPage(prevPage => prevPage + 1);
-    load(false);
+    const nextPage = page + 1;
+    setPage(nextPage);
+    load(false, nextPage);
   };
 
   const handlePublish = () => {

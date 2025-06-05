@@ -6,6 +6,7 @@ import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import FilterModal from '../../components/FilterModal';
 import Navbar from '../../components/NavBar/Navbar'
+import DonationPopup from '../../components/DonationPopup';
 
 interface Empresa {
   id: string;
@@ -198,7 +199,7 @@ const Directorio = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
       <Navbar />
-      
+      <DonationPopup />
       {/* Main content with proper padding to accommodate fixed navbar */}
       <div className="pt-16 px-4 lg:px-8 py-8">
         <motion.header 
