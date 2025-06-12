@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef, useEffect } from 'react';
 
 interface SectionReporteProps {
   includeProdYear: boolean;
@@ -59,6 +59,45 @@ export const SectionReporte: React.FC<SectionReporteProps> = ({
   setIncludeKepler,
   handleGeneratePDF,
 }) => {
+  const allChecks = [
+    includeProdYear,
+    includeProdEntidad,
+    includePrecioTipo,
+    includeDistribEstab,
+    includePrecioRest,
+    includePrecioPescad,
+    includeTratamiento,
+    includeNumEspecies,
+    includePobCostera,
+    includePescadores,
+    includeGenero,
+  ];
+
+  const allSelected  = allChecks.every(Boolean);   // true  si TODOS marcados
+  const someSelected = allChecks.some(Boolean);   // true  si AL MENOS uno
+
+  const masterRef = useRef<HTMLInputElement>(null);
+
+  useEffect(() => {
+    if (masterRef.current) {
+      masterRef.current.indeterminate = !allSelected && someSelected;
+    }
+  }, [allSelected, someSelected]);
+
+  const toggleAll = (checked: boolean) => {
+    setIncludeProdYear(checked);
+    setIncludeProdEntidad(checked);
+    setIncludePrecioTipo(checked);
+    setIncludeDistribEstab(checked);
+    setIncludePrecioRest(checked);
+    setIncludePrecioPescad(checked);
+    setIncludeTratamiento(checked);
+    setIncludeNumEspecies(checked);
+    setIncludePobCostera(checked);
+    setIncludePescadores(checked);
+    setIncludeGenero(checked);
+  };
+
   return (
     <section className="space-y-6">
       <h2 className="text-2xl font-bold">Reporte de Gráficas</h2>
@@ -67,6 +106,18 @@ export const SectionReporte: React.FC<SectionReporteProps> = ({
       </p>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+        {/* ───── Checkbox maestro ───── */}
+        <label className="flex items-center space-x-2 font-semibold">
+          <input
+            ref={masterRef}
+            type="checkbox"
+            checked={allSelected}
+            onChange={(e) => toggleAll(e.target.checked)}
+            className="accent-cyan-400"
+          />
+          <span>Seleccionar todo</span>
+        </label>
+
         <label className="flex items-center space-x-2">
           <input
             type="checkbox"

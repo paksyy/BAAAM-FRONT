@@ -1,156 +1,206 @@
 'use client';
-import { useState, useEffect, useCallback } from 'react';
+
+import { useState, useEffect, useCallback, useRef } from 'react';
 import PostComposer from '@/components/forum/PostComposer';
 import PostCard, { Post } from '@/components/forum/PostCard';
 import SearchPanel from '@/components/forum/SearchPanel';
 import FilterBar from '@/components/forum/FilterBar';
-import TagPicker from '@/components/forum/TagPicker';
 import TopCollaborators from './TopCollaborators';
 
 export default function ForoFeedClient() {
-  const [filters, setFilters] = useState<{ 
-    q?: string; 
-    tag?: string; 
-    sort?: 'newest' | 'likes' 
+  /* ── estado ── */
+  const [filters, setFilters] = useState<{
+    q?: string;
+    tag?: string;
+    sort?: 'newest' | 'likes';
+    ventanilla?: boolean;
   }>({});
-  const [posts, setPosts] = useState<Post[]>([]);
+  const [page, setPage]       = useState(1);
+  const [posts, setPosts]     = useState<Post[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [page, setPage] = useState(1);
+  const [error, setError]     = useState('');
   const [hasMore, setHasMore] = useState(true);
-  const [topUsers, setTopUsers] = useState<any[]>([]);
 
-  useEffect(() => {
-    fetch(`${process.env.NEXT_PUBLIC_API_BASE}/api/user/top-collaborators`)
-      .then(res => res.json())
-      .then(setTopUsers);
-  }, []);  
-  
-  const handleVentanillaToggle = () => {
-    setFilters(prev => ({
-      ...prev,
-      tag: prev.tag === 'ventanilla para mujeres' ? undefined : 'ventanilla para mujeres'
-    }));
-  };
+  /* persistencia */
+  const [stateRestored, setStateRestored] = useState(false);
+  const initRef = useRef(false);
 
-  /* load feed */
-  const load = useCallback(async (resetPage: boolean = true, pageNumber?: number) => {
-  try {
-    setLoading(true);
-    setError('');
-
-    const currentPage = resetPage ? 1 : pageNumber ?? page;
-
+  /* ── helpers ── */
+  const buildURL = (pageNo: number) => {
     const url = new URL(`${process.env.NEXT_PUBLIC_API_BASE}/api/forum/posts`);
-    url.searchParams.set('page', currentPage.toString());
+    url.searchParams.set('page', pageNo.toString());
     url.searchParams.set('limit', '10');
     if (filters.sort) url.searchParams.set('sort', filters.sort);
-    if (filters.tag) url.searchParams.set('tag', filters.tag);
-    if (filters.q) url.searchParams.set('q', filters.q);
+    if (filters.q)    url.searchParams.set('q',   filters.q);
 
-    const res = await fetch(url.toString(), { credentials: 'include' });
+    // Enviar múltiples tags separados por comas
+    const tags: string[] = [];
+    if (filters.ventanilla) tags.push('ventanilla para mujeres');
+    if (filters.tag)        tags.push(filters.tag);
 
-    if (!res.ok) throw new Error('Error al cargar publicaciones');
+    if (tags.length) url.searchParams.set('tag', tags.join(','));
+    return url;
+  };
 
-    const data = await res.json();
+  const fetchPosts = useCallback(
+    async (reset = true, overridePage?: number) => {
+      setLoading(true);
+      setError('');
+      try {
+        const nextPage = reset ? 1 : overridePage ?? page;
+        const urlString = buildURL(nextPage).toString();
+        
+        // Debug: imprime la URL para verificar el formato
+        console.log('Fetching posts with URL:', urlString);
+        
+        const res = await fetch(urlString, { credentials: 'include' });
+        if (!res.ok) throw new Error('Error al cargar publicaciones');
+        const data: Post[] = await res.json();
 
-    if (resetPage) {
-      setPosts(data);
-      setPage(1);
-    } else {
-      setPosts(prev => {
-        const allPosts = [...prev, ...data];
-        const uniquePosts = allPosts.filter((post, index, self) =>
-          index === self.findIndex(p => p.id === post.id)
-        );
-        return uniquePosts;
-      });
+        if (reset) {
+          setPosts(data);
+          setPage(1);
+        } else {
+          setPosts(prev => {
+            const merged = [...prev, ...data];
+            return merged.filter((p, i, self) => i === self.findIndex(x => x.id === p.id));
+          });
+        }
+        setHasMore(data.length === 10);
+      } catch (e) {
+        console.error(e);
+        setError('No se pudieron cargar las publicaciones');
+      } finally {
+        setLoading(false);
+      }
+    },
+    [filters, page]
+  );
+
+  /* ── persistencia en sessionStorage ── */
+  const saveState = useCallback(() => {
+    if (!stateRestored) return;
+    sessionStorage.setItem(
+      'foro-state',
+      JSON.stringify({
+        filters,
+        page,
+        posts,
+        scrollY: window.scrollY,
+        hasMore,
+        ts: Date.now()
+      })
+    );
+  }, [filters, page, posts, hasMore, stateRestored]);
+
+  // restaurar una sola vez
+  useEffect(() => {
+    if (initRef.current) return;
+    initRef.current = true;
+
+    const cached = sessionStorage.getItem('foro-state');
+    let freshNeeded = true;
+
+    if (cached) {
+      try {
+        const { filters: f, page: p, posts: cachedPosts, scrollY, hasMore: hm, ts } = JSON.parse(cached);
+        if (ts && Date.now() - ts < 30 * 60 * 1000 && cachedPosts?.length) {
+          setFilters(f || {});
+          setPage(p || 1);
+          setPosts(cachedPosts);
+          setHasMore(hm ?? true);
+          setLoading(false);
+          freshNeeded = false;
+          requestAnimationFrame(() => setTimeout(() => window.scrollTo(0, scrollY ?? 0), 50));
+        }
+      } catch { /* ignore */ }
     }
 
-    setHasMore(data.length === 10);
-  } catch (err) {
-    console.error(err);
-    setError('No se pudieron cargar las publicaciones');
-  } finally {
-    setLoading(false);
-  }
-}, [filters, page]);
+    setStateRestored(true);
+    if (freshNeeded) fetchPosts(true);
+  }, [fetchPosts]);
 
+  // guarda en cada cambio
+  useEffect(saveState, [saveState]);
   useEffect(() => {
-    load(true);
-  }, [filters]);
+    const handler = () => saveState();
+    window.addEventListener('beforeunload', handler);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') saveState();
+    });
+    return () => {
+      saveState();
+      window.removeEventListener('beforeunload', handler);
+    };
+  }, [saveState]);
 
-  const loadMore = () => {
-    const nextPage = page + 1;
-    setPage(nextPage);
-    load(false, nextPage);
+  // recarga cuando cambian filtros
+  useEffect(() => {
+    if (stateRestored) fetchPosts(true);
+  }, [filters, stateRestored, fetchPosts]);
+
+  /* ── handlers ── */
+  const handleVentanillaToggle = () => {
+    setFilters(prev => ({ ...prev, ventanilla: !prev.ventanilla }));
   };
 
-  const handlePublish = () => {
-    load(true);
+  const handleNewPost = () => {
+    sessionStorage.removeItem('foro-state');
+    fetchPosts(true);
   };
 
+  const loadMore = () => fetchPosts(false, page + 1);
+
+  /* ── UI ── */
   return (
     <div className="flex flex-col lg:flex-row gap-6 w-full">
-      {/* Buscador a la izquierda */}
+      {/* panel izquierdo */}
       <div className="lg:sticky lg:top-24 lg:self-start">
-        <SearchPanel onChange={f => setFilters(f)} />
+        <SearchPanel onChange={o => setFilters(prev => ({ ...prev, ...o }))} />
         <div className="mt-4">
-          <TopCollaborators activeFilters={{
-            tag: filters.tag === 'ventanilla para mujeres' ? undefined : filters.tag,
-            ventanillaActive: filters.tag === 'ventanilla para mujeres'
-          }} />
+          <TopCollaborators activeFilters={{ tag: filters.tag, ventanillaActive: !!filters.ventanilla }} />
         </div>
       </div>
-      
-      {/* Contenido principal */}
+
+      {/* feed */}
       <div className="flex-1 space-y-8">
-        <PostComposer onPublish={handlePublish} />
+        <PostComposer onPublish={handleNewPost} />
+
         <FilterBar
           sort={filters.sort}
-          ventanillaActive={filters.tag === 'ventanilla para mujeres'}
-          selectedTag={filters.tag === 'ventanilla para mujeres' ? undefined : filters.tag}
-          onSortChange={(sort) => setFilters(prev => ({ ...prev, sort }))}
+          ventanillaActive={!!filters.ventanilla}
+          selectedTag={filters.tag}
+          onSortChange={s => setFilters(prev => ({ ...prev, sort: s }))}
           onVentanillaToggle={handleVentanillaToggle}
-          onTagChange={(tag) => setFilters(prev => ({ ...prev, tag }))}
+          onTagChange={t => setFilters(prev => ({ ...prev, tag: t }))}
         />
-        
-        {/* Estado de error */}
+
+        {/* estados */}
         {error && (
           <div className="bg-red-600/20 border border-red-600/50 p-4 rounded-xl">
             <p className="text-red-200">{error}</p>
-            <button 
-              onClick={() => load(true)}
-              className="mt-2 text-sm text-cyan-400 hover:underline"
-            >
+            <button onClick={() => fetchPosts(true)} className="mt-2 text-sm text-cyan-400 hover:underline">
               Reintentar
             </button>
           </div>
         )}
-        
-        {/* Estado de carga inicial */}
+
         {loading && posts.length === 0 ? (
           <div className="flex justify-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-400"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-cyan-400" />
           </div>
         ) : posts.length === 0 ? (
           <div className="bg-slate-800/50 p-8 rounded-xl border border-slate-700/50 text-center">
-            <p className="text-slate-400">
-              No hay publicaciones que coincidan con tu búsqueda
-            </p>
+            <p className="text-slate-400">No hay publicaciones que coincidan con tu búsqueda</p>
           </div>
         ) : (
           <>
             <div className="grid gap-6">
               {posts.map(p => (
-                <PostCard
-                  key={p.id}
-                  post={{ ...p, tags: Array.isArray(p.tags) ? p.tags : [] }}
-                />
+                <PostCard key={p.id} post={{ ...p, tags: Array.isArray(p.tags) ? p.tags : [] }} />
               ))}
             </div>
-            
-            {/* Botón de cargar más */}
+
             {hasMore && (
               <div className="flex justify-center pt-4 pb-8">
                 <button
@@ -162,7 +212,7 @@ export default function ForoFeedClient() {
                       : 'bg-slate-800 text-cyan-400 hover:bg-slate-700'
                   }`}
                 >
-                  {loading ? 'Cargando...' : 'Cargar más'}
+                  {loading ? 'Cargando…' : 'Cargar más'}
                 </button>
               </div>
             )}

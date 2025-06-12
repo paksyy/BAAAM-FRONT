@@ -28,8 +28,8 @@ export default function FilterBar({
         <button
           onClick={() => onSortChange('newest')}
           className={`px-3 py-1.5 rounded-lg text-s ${
-            sort === 'newest' 
-              ? 'bg-cyan-500 text-slate-900 font-medium' 
+            sort === 'newest' || sort === undefined 
+              ? 'bg-cyan-500 text-slate-900 font-medium'
               : 'bg-slate-800/50 hover:bg-slate-800/70 text-slate-300'
           } transition-colors`}
         >
@@ -57,23 +57,28 @@ export default function FilterBar({
               : 'bg-slate-800/50 hover:bg-slate-800/70 text-purple-300'
           } transition-colors`}
         >
-          Ventanilla
+          Ventanilla para mujeres
         </button>
 
         {/* Selector de Tags con ícono */}
-        <div className="relative">
+        <div className="relative shrink-0">
           <select
             value={selectedTag || ''}
             onChange={(e) => onTagChange(e.target.value || undefined)}
-            className="pl-3 pr-6 py-1.5 rounded-lg bg-slate-800/50 hover:bg-slate-800/70 text-slate-300 text-s focus:outline-none appearance-none"
+            /*  w-40 ≈ 10rem; cámbialo a gusto
+                pr-7 deja hueco para el icono       */
+            className="pl-3 pr-8 py-1.5 w-40 md:w-48 truncate
+                      rounded-lg bg-slate-800/50 hover:bg-slate-800/70
+                      text-slate-300 text-sm focus:outline-none appearance-none"
           >
             <option value="">Categorías</option>
             {filteredTags.map(tag => (
               <option key={tag} value={tag}>{tag}</option>
             ))}
           </select>
-          <FiChevronDown 
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none" 
+
+          <FiChevronDown
+            className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
             size={14}
           />
         </div>

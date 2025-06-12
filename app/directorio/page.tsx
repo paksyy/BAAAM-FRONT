@@ -200,6 +200,25 @@ const Directorio = () => {
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
       <Navbar />
       <DonationPopup />
+      {/* ───── CTA registro / actualización ───── */}
+      <div className="w-full px-4 lg:px-8 mt-8 flex justify-end">
+        <a
+          href="https://docs.google.com/forms/d/e/1FAIpQLSetByI2_hAIU5_zOt-vW2ekavTmcy5q2OupYYegjtbWDzA8Vw/viewform"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="inline-block max-w-xs p-4 rounded-xl shadow-xl
+                    bg-gradient-to-r from-cyan-500 to-blue-500
+                    text-slate-900 hover:opacity-90 transition-opacity"
+        >
+          <p className="text-sm font-semibold text-center">
+            ¿Quieres registrar tu establecimiento o actualizar tus datos?
+          </p>
+          <span className="block mt-2 text-center font-bold">
+            Regístrate en este formulario
+          </span>
+        </a>
+      </div>
+
       {/* Main content with proper padding to accommodate fixed navbar */}
       <div className="pt-16 px-4 lg:px-8 py-8">
         <motion.header 

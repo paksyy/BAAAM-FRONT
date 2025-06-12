@@ -1,7 +1,7 @@
 import React from 'react';
 import { FiMap } from 'react-icons/fi';
 import { ChartContainer } from '../ui/ChartContainer';
-import MapWrapper from '../../app/estadisticas/MapWrapper'; // Ajusta si MapWrapper vive en otra carpeta
+import MapWrapper from '../../app/estadisticas/MapWrapper';
 
 interface SectionMapasProps {
   mapKeplerRef: React.RefObject<HTMLIFrameElement | null>;
@@ -55,15 +55,44 @@ const SectionMapas: React.FC<SectionMapasProps> = React.memo(({
         />
         <span>Mostrar mapa: Cobertura Geoespacial (Kepler.gl)</span>
       </div>
+
       {includeKepler && (
-        <ChartContainer id="keplerMap" title="Cobertura Geoespacial (Kepler.gl)" downloadable={false}>
-          <iframe
-            ref={mapKeplerRef}
-            src="/kepler.gl.html"
-            className="w-full h-full rounded-lg"
-            width="100%"
-            height="100%"
-          />
+        <ChartContainer
+          id="keplerMap"
+          title="Cobertura Geoespacial (Kepler.gl)"
+          downloadable={false}
+        >
+          {/* 1 columna en móvil, 2 en pantallas ≥ md */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+            {/* ——— Mapa izquierda: masculina ——— */}
+            <div>
+              <h3 className="text-center font-medium mb-2">
+                Población masculina de comunidades pesqueras
+              </h3>
+              <div className="relative w-full aspect-video rounded-lg overflow-hidden">
+                <iframe
+                  ref={mapKeplerRef}
+                  src="/kepler.gl.html"
+                  className="absolute inset-0 h-full w-[200%] translate-x-0"
+                />
+              </div>
+            </div>
+
+            {/* ——— Mapa derecha: femenina ——— */}
+            <div>
+              <h3 className="text-center font-medium mb-2">
+                Población femenina de comunidades pesqueras
+              </h3>
+              <div className="relative w-full aspect-video rounded-lg overflow-hidden">
+                <iframe
+                  src="/kepler.gl.html"
+                  className="absolute inset-0 h-full w-[200%] -translate-x-1/2"
+                />
+              </div>
+            </div>
+
+          </div>
         </ChartContainer>
       )}
     </section>

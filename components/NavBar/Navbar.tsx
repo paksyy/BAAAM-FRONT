@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { FiMenu, FiX, FiUser, FiLogOut, FiSettings } from 'react-icons/fi';
+import { FiMenu, FiX, FiUser, FiLogOut, FiAlertCircle  } from 'react-icons/fi';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import baaamLogo from '../../public/baaam-logo.png';
@@ -48,7 +48,6 @@ const Navbar = () => {
           {/* Left side: Logo and navigation links */}
           <div className="flex items-center">
             {/* Logo */}
-            <Link href="/" className="flex items-center">
               <div className="relative h-12 w-12 mr-3">
                 <Image 
                   src={baaamLogo} 
@@ -61,7 +60,6 @@ const Navbar = () => {
               <span className="text-xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-cyan-500 to-blue-600">
                 BAA&apos;AM
               </span>
-            </Link>
             
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center ml-10">
@@ -118,12 +116,12 @@ const Navbar = () => {
                       Perfil
                     </Link>
                     <Link
-                      href="/configuracion"
-                      className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                      onClick={() => setShowProfileMenu(false)}
+                      href="/reportar"
+                      className="flex items-center px-3 py-3 rounded-lg text-gray-800 hover:bg-gray-100 hover:text-cyan-600 transition-colors text-base"
+                      onClick={toggleMenu}
                     >
-                      <FiSettings className="mr-2" size={16} />
-                      Configuración
+                      <FiAlertCircle className="mr-2" size={18} />
+                      Reportar
                     </Link>
                     <div className="border-t border-gray-200 my-1"></div>
                     <a
@@ -196,12 +194,12 @@ const Navbar = () => {
                 Perfil
               </Link>
               <Link
-                href="/configuracion"
+                href="/reportar"
                 className="flex items-center px-3 py-3 rounded-lg text-gray-800 hover:bg-gray-100 hover:text-cyan-600 transition-colors text-base"
                 onClick={toggleMenu}
               >
-                <FiSettings className="mr-2" size={18} />
-                Configuración
+                <FiAlertCircle className="mr-2" size={18} />
+                Reportar
               </Link>
               <a
                 href="/logout"

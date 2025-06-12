@@ -61,6 +61,12 @@ export const ProduccionSection: React.FC<ProduccionSectionProps> = ({
 
   const tooltipFormatter = (value: number) => value.toLocaleString();
 
+  const [openDropdown, setOpenDropdown] = useState<string | null>(null);
+
+  const handleToggleDropdown = (key: string) => {
+    setOpenDropdown(prev => (prev === key ? null : key));
+  };
+
   return (
     <>
       <section id="sec-produccion-ano" className="space-y-6">
@@ -75,8 +81,8 @@ export const ProduccionSection: React.FC<ProduccionSectionProps> = ({
             selectedValues={selectedFilters.entidades}
             filterKey="entidades"
             icon={FiMap}
-            isOpen={openDropdowns['Entidades']}
-            onToggle={() => onToggleDropdown('Entidades')}
+            isOpen={openDropdown === 'Entidades'}
+            onToggle={() => handleToggleDropdown('Entidades')}
             onChange={onFilterChange}
           />
           <FilterDropdown
@@ -85,8 +91,8 @@ export const ProduccionSection: React.FC<ProduccionSectionProps> = ({
             selectedValues={selectedFilters.especies}
             filterKey="especies"
             icon={FiAnchor}
-            isOpen={openDropdowns['Especies']}
-            onToggle={() => onToggleDropdown('Especies')}
+            isOpen={openDropdown === 'Especies'}
+            onToggle={() => handleToggleDropdown('Especies')}
             onChange={onFilterChange}
           />
           <FilterDropdown
@@ -95,8 +101,8 @@ export const ProduccionSection: React.FC<ProduccionSectionProps> = ({
             selectedValues={selectedFilters.anos}
             filterKey="anos"
             icon={FiBarChart}
-            isOpen={openDropdowns['Años']}
-            onToggle={() => onToggleDropdown('Años')}
+            isOpen={openDropdown === 'Años'}
+            onToggle={() => handleToggleDropdown('Años')}
             onChange={onFilterChange}
           />
           <FilterDropdown
@@ -105,8 +111,8 @@ export const ProduccionSection: React.FC<ProduccionSectionProps> = ({
             selectedValues={selectedFilters.origenes}
             filterKey="origenes"
             icon={FiTrendingUp}
-            isOpen={openDropdowns['Origen']}
-            onToggle={() => onToggleDropdown('Origen')}
+            isOpen={openDropdown === 'Origen'}
+            onToggle={() => handleToggleDropdown('Origen')}
             onChange={onFilterChange}
           />
         </div>

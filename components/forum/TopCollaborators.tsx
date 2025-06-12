@@ -51,11 +51,19 @@ export default function TopCollaborators({ activeFilters }: Props) {
 
   return (
     <div className="bg-slate-800/50 p-4 rounded-xl border border-slate-700/50">
-      <div className="flex items-center gap-2 mb-4 text-cyan-300">
-        <FiZap className="text-purple-400" />
-        <h2 className="text-xl font-semibold">
-          Huella en la comunidad {activeFilters.tag && `en #${activeFilters.tag}`}
+      {/* Título */}
+      <div className="mb-4">
+        <h2 className="flex items-center gap-2 text-xl font-semibold text-cyan-300">
+          <FiZap className="text-purple-400" />
+          Huella en la comunidad
         </h2>
+
+        {/* Tag debajo, sólo si existe */}
+        {activeFilters.tag && (
+          <p className="mt-1 ml-7 text-sm text-cyan-400 font-medium">
+            #{activeFilters.tag}
+          </p>
+        )}
       </div>
 
       {loading ? (

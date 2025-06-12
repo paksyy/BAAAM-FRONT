@@ -224,7 +224,7 @@ export default function PostDetail() {
               
               <div className="flex justify-between items-center">
                 <span className="text-sm text-slate-400">
-                  {280 - text.length} caracteres restantes
+                  {300 - text.length} caracteres restantes
                 </span>
                 
                 <button

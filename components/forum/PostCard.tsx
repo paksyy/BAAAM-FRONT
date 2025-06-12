@@ -127,8 +127,8 @@ export default function PostCard({ post }: { post: Post }) {
 
       <Link href={`/foro/${post.id}`} className="block">
         <p className="whitespace-pre-line mb-4 hover:bg-slate-700/10 rounded-lg p-2 transition-colors">
-          {post.content.slice(0, 280)}
-          {post.content.length > 280 && '…'}
+          {post.content.slice(0, 300)}
+          {post.content.length > 300 && '…'}
         </p>
         
         {post.image && (

@@ -317,12 +317,12 @@ const EstadisticasPage: React.FC = () => {
           transition={{ duration: 0.6 }}
           className="text-center space-y-4"
         >
-          <h1 className="text-4xl lg:text-5xl font-extrabold bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">
-            Estadísticas Pesqueras
+          <h1 className="text-4xl lg:text-5xl font-extrabold mb-6 pb-2 lg:pb-3 lg:mb-8 bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 to-blue-400">
+            Estadísticas Acuícolas y Pesqueras
           </h1>
-          <p className="text-cyan-100/90">
+          <h2 className="text-2xl text-cyan-100/90">
             Análisis interactivo de producción, precios, demografía y generación de reportes
-          </p>
+          </h2>
           {/* –– Sin buscador –– */}
         </motion.header>
 
