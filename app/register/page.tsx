@@ -14,6 +14,7 @@ import {
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Captcha from '../../components/captcha'; // Nota: Con C mayúscula
 
 const SignupPage = () => {
   const router = useRouter();
@@ -39,6 +40,7 @@ const SignupPage = () => {
     confirm: '',
     general: ''
   });
+  const [captcha, setCaptcha] = useState<string | null>(null);
 
   const apiUrl = process.env.NEXT_PUBLIC_API_URL;
 
@@ -116,6 +118,10 @@ const SignupPage = () => {
       }
       return;
     }
+    if (!captcha) {
+      setErrors((p) => ({ ...p, general: 'Completa el CAPTCHA' }));
+      return;
+    }
 
     setIsLoading(true);
 
@@ -128,14 +134,16 @@ const SignupPage = () => {
           name,
           email,
           password,
-          accepted_terms: acceptedTerms
-        })
+          accepted_terms: acceptedTerms,
+          captcha,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        router.push('/login');
+        // CAMBIO: Redirigir a verificación en lugar de login
+        router.push(`/verify-email?email=${encodeURIComponent(email)}`);
       } else {
         setErrors((p) => ({ ...p, general: data.error || 'Error en el registro' }));
       }
@@ -189,17 +197,17 @@ const SignupPage = () => {
               {/* ---------- Contenido EXACTO ---------- */}
               <div className="prose prose-invert max-w-none text-white space-y-8">
                 <h3 className="text-xl font-semibold text-cyan-400">
-                  Lineamientos de uso para usuarios de BAA’AM
+                  Lineamientos de uso para usuarios de BAA'AM
                 </h3>
 
                 <p>
                   El presente documento describe los términos y condiciones
-                  generales (en adelante “TÉRMINOS Y CONDICIONES”) aplicables al
+                  generales (en adelante "TÉRMINOS Y CONDICIONES") aplicables al
                   uso de los contenidos y servicios ofrecidos a través de la
-                  plataforma digital de BAA’AM, del cual son titulares Ivone
+                  plataforma digital de BAA'AM, del cual son titulares Ivone
                   Giﬀard&nbsp;Mena, asociados, y la Universidad Autónoma de Baja
                   California (UABC). Cualquier persona física que desee acceder o
-                  hacer uso de los servicios de la plataforma digital de BAA’AM
+                  hacer uso de los servicios de la plataforma digital de BAA'AM
                   podrá hacerlo sujetándose a los presentes TÉRMINOS Y
                   CONDICIONES. En caso de no aceptar estos TÉRMINOS Y
                   CONDICIONES, deberá abstenerse de utilizar el servicio.
@@ -207,7 +215,7 @@ const SignupPage = () => {
 
                 <p>
                   Bienvenido/a a Base de Datos Amplia para la Pesca y
-                  Acuacultura en México (BAA’AM). Antes de los utilizar los
+                  Acuacultura en México (BAA'AM). Antes de los utilizar los
                   servicios de usuario, te pedimos que leas detenidamente los
                   siguientes términos y condiciones. Al acceder y utilizar
                   nuestra plataforma, aceptas cumplir con estos términos.
@@ -219,15 +227,15 @@ const SignupPage = () => {
                   <li>
                     <strong>Usuario:</strong> Toda persona que acceda o utilice
                     cualquier servicio dentro y relacionado con la plataforma de
-                    BAA’AM.
+                    BAA'AM.
                   </li>
                   <li>
                     <strong>Usuario Lector:</strong> Toda persona que tenga
-                    acceso únicamente a la página web de BAA’AM
+                    acceso únicamente a la página web de BAA'AM
                   </li>
                   <li>
                     <strong>Usuario Plus:</strong> Al realizar su registro,
-                    accede a la página web y a la plataforma digital de BAA’AM
+                    accede a la página web y a la plataforma digital de BAA'AM
                     que incluye secciones exclusivas como directorio, foro, bolsa
                     de empleo, donaciones, promoción de conferencias y gráficas
                     y estadísticas, personalizar su perfil y recibir
@@ -251,7 +259,7 @@ const SignupPage = () => {
                   </li>
                   <li>
                     <strong>Servicios:</strong> Funcionalidades, productos o
-                    información proporcionados por BAA’AM.
+                    información proporcionados por BAA'AM.
                   </li>
                 </ul>
 
@@ -264,14 +272,14 @@ const SignupPage = () => {
                     infrinjan derechos de terceros.
                   </li>
                   <li>
-                    La plataforma digital de BAA’AM llevará a cabo las acciones
+                    La plataforma digital de BAA'AM llevará a cabo las acciones
                     de acuerdo con sus facultades que le permitan mantener el
                     buen funcionamiento de dicha plataforma tecnológica.
                   </li>
                   <li>
-                    BAA’AM no será responsable de los daños que pudiesen
+                    BAA'AM no será responsable de los daños que pudiesen
                     ocasionarse por un uso inadecuado de la plataforma digital
-                    de BAA’AM.
+                    de BAA'AM.
                   </li>
                   <li>
                     Está prohibido el uso de bots, scripts o cualquier tecnología
@@ -280,7 +288,7 @@ const SignupPage = () => {
                   </li>
                   <li>
                     No se permite publicar productos en foros y demás secciones
-                    interactivas no designadas fuera del apartado “Productos”.
+                    interactivas no designadas fuera del apartado "Productos".
                   </li>
                   <li>
                     No se permite la publicación de cualquier contenido
@@ -293,7 +301,7 @@ const SignupPage = () => {
                   </li>
                   <li>
                     No se permite el uso de lenguaje ofensivo, discriminatorio o
-                    difamatorio en “Foro” y demás secciones interactivas.
+                    difamatorio en "Foro" y demás secciones interactivas.
                   </li>
                 </ul>
 
@@ -336,7 +344,7 @@ const SignupPage = () => {
                   <li>
                     De conformidad con la Ley General de Transparencia, la Ley
                     Federal de Transparencia y otras disposiciones fiscales y
-                    legales, BAA’AM se compromete a adoptar las medidas necesarias
+                    legales, BAA'AM se compromete a adoptar las medidas necesarias
                     para asegurar la privacidad de los datos personales recabados
                     de forma que se garantice su seguridad, se evite su
                     alteración, pérdida o tratamiento no autorizado.
@@ -355,7 +363,7 @@ const SignupPage = () => {
                   <li>
                     Todos los derechos sobre el contenido, logotipos, marcas y
                     demás elementos distintivos utilizados en esta plataforma
-                    pertenecen a BAA’AM, a la Universidad Autónoma de Baja
+                    pertenecen a BAA'AM, a la Universidad Autónoma de Baja
                     California (UABC) o a sus respectivos titulares, según
                     corresponda.
                   </li>
@@ -363,7 +371,7 @@ const SignupPage = () => {
                     No se permite copiar, modificar, reproducir, distribuir,
                     transmitir, exhibir, vender o explotar de ningún modo el
                     contenido, ya sea parcial o total, sin la autorización expresa
-                    y por escrito de BAA’AM.
+                    y por escrito de BAA'AM.
                   </li>
                   <li>
                     Cualquier uso no autorizado constituirá una infracción a la
@@ -376,13 +384,13 @@ const SignupPage = () => {
                 <h4 className="text-lg font-semibold text-cyan-300">6. Limitación de Responsabilidad</h4>
                 <ul className="space-y-2">
                   <li>
-                    BAA’AM no se hace responsable por daños o pérdidas derivadas
+                    BAA'AM no se hace responsable por daños o pérdidas derivadas
                     del uso de la plataforma, salvo en casos de dolo o negligencia
                     grave.
                   </li>
                   <li>No garantizamos la disponibilidad ininterrumpida del servicio.</li>
                   <li>
-                    BAA’AM se exime de toda responsabilidad derivada de cualquier
+                    BAA'AM se exime de toda responsabilidad derivada de cualquier
                     transacción, acuerdo o relación comercial que se lleve a cabo
                     entre vendedores, patrocinadores y usuarios a través de la
                     plataforma.
@@ -410,9 +418,9 @@ const SignupPage = () => {
                   Estos términos se rigen por la Ley de Transparencia y Acceso a
                   la Información Pública para el Estado de Baja California.
                   Cualquier controversia será resuelta en los tribunales de Baja
-                  California. BAA’AM se reserva la facultad de presentar las
+                  California. BAA'AM se reserva la facultad de presentar las
                   acciones civiles o penales que considere necesarias por la
-                  utilización indebida de la plataforma digital de BAA’AM o por el
+                  utilización indebida de la plataforma digital de BAA'AM o por el
                   incumplimiento de los presentes TÉRMINOS Y CONDICIONES.
                 </p>
 
@@ -621,6 +629,8 @@ const SignupPage = () => {
           {errors.general && (
             <p className="text-red-500 text-sm text-center">{errors.general}</p>
           )}
+
+          <Captcha onChange={setCaptcha} />
 
           {/* Botón enviar */}
           <motion.button

@@ -4,6 +4,7 @@ import { FiLock, FiMail, FiArrowRight, FiEye, FiEyeOff } from 'react-icons/fi';
 import Link from 'next/link';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Captcha from '../../components/captcha'; // Nota: Con C mayúscula
 
 const LoginPage = () => {
   const router = useRouter();
@@ -18,6 +19,7 @@ const LoginPage = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errors, setErrors] = useState({ email: '', password: '', general: '' });
   const [isLoading, setIsLoading] = useState(false);
+  const [captcha, setCaptcha] = useState<string | null>(null);
 
   // Validación de email
   const validateEmail = (email: string) => {
@@ -57,7 +59,10 @@ const LoginPage = () => {
     const isPasswordValid = validatePassword(password);
     
     if (!isEmailValid || !isPasswordValid) return;
-
+    if (!captcha) {
+      setErrors((p) => ({ ...p, general: 'Completa el CAPTCHA' }));
+      return;
+    }
     setIsLoading(true);
     
     try {
@@ -65,7 +70,7 @@ const LoginPage = () => {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({ email, password, captcha }),
       });
       
       const data = await response.json();
@@ -162,6 +167,7 @@ const LoginPage = () => {
           {errors.general && (
             <p className="text-red-500 text-sm text-center">{errors.general}</p>
           )}
+          <Captcha onChange={setCaptcha} />
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
